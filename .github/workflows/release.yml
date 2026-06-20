@@ -1,0 +1,88 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/triplets
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Create triplet
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force triplets | Out-Null
+          @"
+          set(VCPKG_TARGET_ARCHITECTURE x64)
+          set(VCPKG_CRT_LINKAGE static)
+          set(VCPKG_LIBRARY_LINKAGE static)
+          set(VCPKG_BUILD_TYPE release)
+          "@ | Set-Content triplets/x64-windows-static.cmake
+
+      - name: Cache packages
+        uses: actions/cache@v4
+        with:
+          path: build/vcpkg_installed
+          key: vcpkg-${{ hashFiles('vcpkg.json') }}
+
+      - name: Update version
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          $parts = $ver.Split('.')
+          $numVer = "$($parts[0]),$($parts[1]),$($parts[2]),$($parts[3])"
+          $rc = Get-Content assets/resource.rc -Raw -Encoding utf8
+          $rc = $rc -replace 'FILEVERSION \d+,\d+,\d+,\d+', "FILEVERSION $numVer"
+          $rc = $rc -replace 'PRODUCTVERSION \d+,\d+,\d+,\d+', "PRODUCTVERSION $numVer"
+          $rc = $rc -replace 'VALUE "FileVersion", "\d[^"]*"', "VALUE `"FileVersion`", `"$ver`""
+          $rc = $rc -replace 'VALUE "ProductVersion", "\d[^"]*"', "VALUE `"ProductVersion`", `"$ver`""
+          [System.IO.File]::WriteAllText("assets/resource.rc", $rc, [System.Text.Encoding]::UTF8)
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_OVERLAY_TRIPLETS="${{ github.workspace }}/triplets"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        shell: pwsh
+        run: |
+          cd build/bin
+          7z a Bootstrapper.7z AisakaLauncher.exe
+
+      - name: Upload
+        shell: pwsh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          aws s3 cp build/bin/Bootstrapper.7z "s3://${{ secrets.BUCKET }}/WindowsBootstrapper/$ver/Bootstrapper.7z" --endpoint-url "${{ secrets.ENDPOINT }}"
+          $ver | Out-File -FilePath ver.txt -Encoding ascii -NoNewline
+          aws s3 cp ver.txt "s3://${{ secrets.BUCKET }}/versionBootstrapper" --endpoint-url "${{ secrets.ENDPOINT }}" --content-type "text/plain"
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            build/bin/AisakaLauncher.exe
+          generate_release_notes: true

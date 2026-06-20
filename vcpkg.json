@@ -1,0 +1,9 @@
+{
+  "name": "aisaka-launcher",
+  "version": "1.0.0",
+  "builtin-baseline": "d59510da59a2ee8b943509998b63da7b472d93cf",
+  "dependencies": [
+    "curl",
+    "libarchive"
+  ]
+}
