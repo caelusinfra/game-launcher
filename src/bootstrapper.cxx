@@ -117,6 +117,7 @@ void RunBootstrap(const ProductConfig& cfg, const std::string& cdn_url, const st
         if (!first_install && installed == current_version) {
             report("starting", -1);
             copy_self();
+            reg.RegisterProtocol(bootstrapper);
             kill_me_please(bin);
             return;
         }
