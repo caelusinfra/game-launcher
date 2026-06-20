@@ -31,13 +31,13 @@ static std::wstring BuildArgs(const PlayArgs& args)
     return cmd;
 }
 
-static void Launch(const std::wstring& bootstrapper, const std::wstring& extra_args = L"")
+static void Launch(const std::wstring& bootstrapper, const std::wstring& args = L"")
 {
     STARTUPINFOW si{};
     si.cb = sizeof(si);
     PROCESS_INFORMATION pi{};
     std::wstring cmd = L"\"" + bootstrapper + L"\"";
-    if (!extra_args.empty()) cmd += L" " + extra_args;
+    if (!args.empty()) cmd += L" " + args;
     if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         DWORD err = GetLastError();
         throw std::runtime_error("Failed to launch " + std::string(bootstrapper.begin(), bootstrapper.end()) + " (" + std::to_string(err) + ")");
@@ -91,7 +91,7 @@ void RunBootstrap(const ProductConfig& cfg, const std::string& cdn_url, const st
         if (play_args)
             Launch(bin, BuildArgs(*play_args));
         else
-            Launch(bin);
+            Launch(bin, L"--app");
         if (status_cb) status_cb({ {}, 100, false, {}, true, false, tray });
     };
 
