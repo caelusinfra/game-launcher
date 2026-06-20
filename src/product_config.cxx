@@ -20,7 +20,7 @@ ProductConfig GetProductConfig(const wchar_t* lpCmdLine)
         .version = "versionPlayer",
         .type = "WindowsPlayer",
         .reg_root = "SOFTWARE\\Aisaka Unincorporation\\Player",
-        .protocol = L"caelus-launcher",
+        .protocol = L"aisaka-player",
         .name = L"Aisaka Player"
     };
 }
