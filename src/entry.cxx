@@ -109,13 +109,7 @@ static std::optional<PlayArgs> ReadJoinScript(const wchar_t* lpCmdLine)
     PlayArgs args;
     args.place_launcher_url = it_url->second;
     args.auth_ticket = it_ticket->second;
-    args.auth_url = [&] {
-        const auto& u = args.place_launcher_url;
-        auto p = u.find("://");
-        if (p == std::string::npos) return u;
-        auto q = u.find('/', p + 3);
-        return q == std::string::npos ? u : u.substr(0, q);
-    }() + "/Login/Negotiate.ashx";
+    args.auth_url = "https://auth.aisaka.me/v1/authentication-ticket/redeem";
 
     return args;
 }
