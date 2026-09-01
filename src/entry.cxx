@@ -27,7 +27,7 @@
 namespace fs = std::filesystem;
 
 const std::string cdn_url = "https://setup.clscdn.lol";
-const std::string base_url = "https://www.caelus.lol";
+const std::string base_url = "https://www.aisaka.me";
 
 static std::string UrlDecode(const std::string& in)
 {
